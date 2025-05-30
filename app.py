@@ -452,7 +452,7 @@ def gen_sh(
     ae_path = resolve_path("models/vae/ae.sft")
     sh = f"""accelerate launch {line_break}
   --mixed_precision bf16 {line_break}
-  --num_cpu_threads_per_process 1 {line_break}
+  --num_cpu_threads_per_process 12 {line_break}
   sd-scripts/flux_train_network.py {line_break}
   --pretrained_model_name_or_path {pretrained_model_path} {line_break}
   --clip_l {clip_path} {line_break}
@@ -615,10 +615,12 @@ def start_training(
     # Use Popen to run the command and capture output in real-time
     env = os.environ.copy()
     env['PYTHONIOENCODING'] = 'utf-8'
-    env['LOG_LEVEL'] = 'DEBUG'
+    env['LOG_LEVEL'] = 'DEBUG' # This helps in getting more verbose logs from the training script
     runner = LogsViewRunner()
     cwd = os.path.dirname(os.path.abspath(__file__))
     gr.Info(f"Started training")
+    # LogsViewRunner streams the output from the command. 
+    # If flux_train_network.py prints logs per iteration, they will be displayed.
     yield from runner.run_command([command], cwd=cwd)
     yield runner.log(f"Runner: {runner}")
 
@@ -823,7 +825,7 @@ h3{margin-top: 0}
 nav{position: fixed; top: 0; left: 0; right: 0; z-index: 1000; text-align: center; padding: 10px; box-sizing: border-box; display: flex; align-items: center; backdrop-filter: blur(10px); }
 nav button { background: none; color: firebrick; font-weight: bold; border: 2px solid firebrick; padding: 5px 10px; border-radius: 5px; font-size: 14px; }
 nav img { height: 40px; width: 40px; border-radius: 40px; }
-nav img.rotate { animation: rotate 2s linear infinite; }
+nav img.rotate { animation: rotate 2s linear infinite; } /* This CSS for rotation can remain, but JS won't add 'rotate' class based on autoscroll */
 .flexible { flex-grow: 1; }
 .tast-details { margin: 10px 0 !important; }
 .toast-wrap { bottom: var(--size-4) !important; top: auto !important; border: none !important; backdrop-filter: blur(10px); }
@@ -841,29 +843,13 @@ label { font-weight: bold !important; }
 
 js = """
 function() {
-    let autoscroll = document.querySelector("#autoscroll")
-    if (window.iidxx) {
-        window.clearInterval(window.iidxx);
-    }
-    window.iidxx = window.setInterval(function() {
-        let text=document.querySelector(".codemirror-wrapper .cm-line").innerText.trim()
-        let img = document.querySelector("#logo")
-        if (text.length > 0) {
-            autoscroll.classList.remove("hidden")
-            if (autoscroll.classList.contains("on")) {
-                autoscroll.textContent = "Autoscroll ON"
-                window.scrollTo(0, document.body.scrollHeight, { behavior: "smooth" });
-                img.classList.add("rotate")
-            } else {
-                autoscroll.textContent = "Autoscroll OFF"
-                img.classList.remove("rotate")
-            }
-        }
-    }, 500);
-    console.log("autoscroll", autoscroll)
-    autoscroll.addEventListener("click", (e) => {
-        autoscroll.classList.toggle("on")
-    })
+    // Autoscroll and related logo rotation logic removed.
+    // The 'iidxx' interval and 'autoscroll' event listener are removed.
+    // Logo rotation based on autoscroll status is also removed.
+    // If you need logo rotation based on another condition (e.g. training active),
+    // a different JS logic would be needed.
+
+    // Debounce logic for refresh button (remains unchanged)
     function debounce(fn, delay) {
         let timeoutId;
         return function(...args) {
@@ -879,6 +865,7 @@ function() {
     const debouncedClick = debounce(handleClick, 1000);
     document.addEventListener("input", debouncedClick);
 
+    // Start training button click effect (remains unchanged)
     document.querySelector("#start_training").addEventListener("click", (e) => {
       e.target.classList.add("clicked")
       e.target.innerHTML = "Training..."
@@ -898,8 +885,7 @@ with gr.Blocks(elem_id="app", theme=theme, css=css, fill_width=True) as demo:
                 gr.HTML("""<nav>
             <img id='logo' src='/file=icon.png' width='80' height='80'>
             <div class='flexible'></div>
-            <button id='autoscroll' class='on hidden'></button>
-        </nav>
+            </nav>
         """)
             with gr.Row(elem_id='container'):
                 with gr.Column():
@@ -986,7 +972,7 @@ with gr.Blocks(elem_id="app", theme=theme, css=css, fill_width=True) as demo:
                     with gr.Column(min_width=300):
                         seed = gr.Number(label="--seed", info="Seed", value=42, interactive=True)
                     with gr.Column(min_width=300):
-                        workers = gr.Number(label="--max_data_loader_n_workers", info="Number of Workers", value=2, interactive=True)
+                        workers = gr.Number(label="--max_data_loader_n_workers", info="Number of Workers", value=100, interactive=True)
                     with gr.Column(min_width=300):
                         learning_rate = gr.Textbox(label="--learning_rate", info="Learning Rate", value="8e-4", interactive=True)
                     with gr.Column(min_width=300):
