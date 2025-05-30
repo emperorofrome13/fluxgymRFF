@@ -1,3 +1,6 @@
+Will need to copy Flux_train_Network.py into  /sd-scripts folder and overwrite file. 
+
+
 # Flux Gym
 
 Dead simple web UI for training FLUX LoRA **with LOW VRAM (12GB/16GB/20GB) support.**
